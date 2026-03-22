@@ -6,11 +6,15 @@ Reports available vs sold seats by section, ticket type, show, and overall.
 
 import asyncio
 import argparse
+import json
 import re
-from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from dataclasses import dataclass, field, asdict
 from playwright.async_api import async_playwright, Browser, Page
 
 BASE_URL = "https://acadiau.universitytickets.com"
+DATA_DIR = Path(__file__).parent / "data"
 
 # Show event IDs in chronological order
 SHOWS = {
@@ -51,11 +55,68 @@ class SectionStats:
 @dataclass
 class ShowStats:
     sections: dict[str, SectionStats] = field(default_factory=dict)
-    
+
     def available_for_type(self, ticket_type: str) -> int:
         info = TICKET_TYPES.get(ticket_type, {})
         sections = info.get("sections", [])
         return sum(self.sections.get(s, SectionStats()).available for s in sections)
+
+
+def stats_to_dict(all_stats: dict[str, ShowStats]) -> dict:
+    """Convert stats to a JSON-serializable dict."""
+    return {
+        show_name: {
+            "sections": {
+                sec: asdict(stats) for sec, stats in show_stats.sections.items()
+            }
+        }
+        for show_name, show_stats in all_stats.items()
+    }
+
+
+def dict_to_stats(data: dict) -> dict[str, ShowStats]:
+    """Convert dict back to stats objects."""
+    result = {}
+    for show_name, show_data in data.items():
+        sections = {}
+        for sec, sec_data in show_data["sections"].items():
+            sections[sec] = SectionStats(**sec_data)
+        result[show_name] = ShowStats(sections=sections)
+    return result
+
+
+def save_to_json(all_stats: dict[str, ShowStats]) -> Path:
+    """Save stats to a timestamped JSON file."""
+    DATA_DIR.mkdir(exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filepath = DATA_DIR / f"scrape_{timestamp}.json"
+    
+    data = {
+        "scraped_at": timestamp,
+        "stats": stats_to_dict(all_stats),
+    }
+    
+    with open(filepath, "w") as f:
+        json.dump(data, f, indent=2)
+    
+    return filepath
+
+
+def load_from_json(filepath: Path) -> tuple[dict[str, ShowStats], str]:
+    """Load stats from a JSON file. Returns (stats, timestamp)."""
+    with open(filepath) as f:
+        data = json.load(f)
+    return dict_to_stats(data["stats"]), data["scraped_at"]
+
+
+def get_latest_json() -> Path | None:
+    """Find the most recent JSON file in the data directory."""
+    if not DATA_DIR.exists():
+        return None
+    files = list(DATA_DIR.glob("scrape_*.json"))
+    if not files:
+        return None
+    return max(files, key=lambda p: p.stat().st_mtime)
 
 
 async def make_browser() -> Browser:
@@ -144,7 +205,7 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
     return stats
 
 
-def print_report(all_stats: dict[str, ShowStats], verbose: bool):
+def print_report(all_stats: dict[str, ShowStats], verbose: bool, timestamp: str | None = None):
     """Print the availability report."""
     
     total_available = 0
@@ -152,6 +213,8 @@ def print_report(all_stats: dict[str, ShowStats], verbose: bool):
     
     print("\n" + "=" * 70)
     print("CINDERELLA TICKET AVAILABILITY REPORT")
+    if timestamp:
+        print(f"Scraped: {timestamp}")
     print("=" * 70)
     
     for show_name, stats in all_stats.items():
@@ -190,12 +253,8 @@ def print_report(all_stats: dict[str, ShowStats], verbose: bool):
     print()
 
 
-async def main():
-    parser = argparse.ArgumentParser(description="Scrape Cinderella ticket availability")
-    parser.add_argument("-v", "--verbose", action="store_true", 
-                        help="Show per-section details for debugging")
-    args = parser.parse_args()
-    
+async def run_scraper(verbose: bool):
+    """Run the scraper and save results."""
     browser, playwright = await make_browser()
     all_stats: dict[str, ShowStats] = {}
     
@@ -207,8 +266,40 @@ async def main():
         await browser.close()
         await playwright.stop()
     
-    print_report(all_stats, args.verbose)
+    filepath = save_to_json(all_stats)
+    print(f"\nSaved to: {filepath}")
+    
+    print_report(all_stats, verbose)
+
+
+def show_from_file(filepath: Path, verbose: bool):
+    """Load and display stats from a JSON file."""
+    all_stats, timestamp = load_from_json(filepath)
+    print(f"Loaded from: {filepath}")
+    print_report(all_stats, verbose, timestamp)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Scrape Cinderella ticket availability")
+    parser.add_argument("-v", "--verbose", action="store_true", 
+                        help="Show per-section details")
+    parser.add_argument("--from-file", type=Path, metavar="FILE",
+                        help="Show report from a specific JSON file")
+    parser.add_argument("--from-latest", action="store_true",
+                        help="Show report from the most recent JSON file")
+    args = parser.parse_args()
+    
+    if args.from_file:
+        show_from_file(args.from_file, args.verbose)
+    elif args.from_latest:
+        latest = get_latest_json()
+        if latest:
+            show_from_file(latest, args.verbose)
+        else:
+            print("No saved data found. Run the scraper first.")
+    else:
+        asyncio.run(run_scraper(args.verbose))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
