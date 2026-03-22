@@ -112,10 +112,10 @@ async def scrape_show(browser: Browser, show_name: str, event_id: int) -> ShowSt
         await page.goto(f"{BASE_URL}/w/event.aspx?id={event_id}", timeout=60000)
         await wait_for_cloudflare(page)
         
-        # Select 1 ticket from first dropdown - this is required to access seat maps
+        # Select 1 of each ticket type - required to access all sections (P1/P2/P3)
         dropdowns = await page.locator('[id*="dropLimit"]').all()
-        if dropdowns:
-            await dropdowns[0].select_option('1')
+        for dd in dropdowns:
+            await dd.select_option('1')
         
         # Go to section selection page to set up session
         await page.locator('#btnSelectSection').click()
