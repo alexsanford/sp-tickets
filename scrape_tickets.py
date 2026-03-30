@@ -240,7 +240,8 @@ def print_report(all_stats: dict[str, ShowStats], verbose: bool, timestamp: str 
             secs = TICKET_TYPES[tt]["sections"]
             print(f"  {tt} ({secs[0][-1]}&{secs[1][-1]}): {avail:3d} available")
 
-        print(f"  Show total: {show_available} available, {show_blocked} sold")
+        percent = show_blocked / (show_blocked + show_available) * 100
+        print(f"  Show total: {show_available} available, {show_blocked} sold ({percent:.1f}% sold)")
 
     # Overall summary
     print("\n" + "=" * 70)
