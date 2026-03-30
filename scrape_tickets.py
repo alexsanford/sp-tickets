@@ -90,15 +90,15 @@ def save_to_json(all_stats: dict[str, ShowStats]) -> Path:
     DATA_DIR.mkdir(exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filepath = DATA_DIR / f"scrape_{timestamp}.json"
-    
+
     data = {
         "scraped_at": timestamp,
         "stats": stats_to_dict(all_stats),
     }
-    
+
     with open(filepath, "w") as f:
         json.dump(data, f, indent=2)
-    
+
     return filepath
 
 
@@ -153,79 +153,79 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
     stats = ShowStats()
     context = await new_context(browser)
     page = await context.new_page()
-    
+
     try:
         # Load event page to establish session
         await page.goto(f"{BASE_URL}/w/event.aspx?id={event_id}", timeout=60000)
         await wait_for_cloudflare(page)
-        
+
         # Get all dropdowns
         dropdowns = await page.locator('[id*="dropLimit"]').all()
-        
+
         # Process each ticket type separately (P1, P2, P3)
         for tt_name, tt_info in TICKET_TYPES.items():
             # Reset all dropdowns to 0
             for dd in dropdowns:
                 await dd.select_option('0')
-            
+
             # Select only this ticket type's dropdowns
             for idx in tt_info["dropdowns"]:
                 if idx < len(dropdowns):
                     await dropdowns[idx].select_option('1')
-            
+
             # Go to section selection page
             await page.locator('#btnSelectSection').click()
             await asyncio.sleep(2)
             await page.wait_for_load_state('networkidle', timeout=30000)
-            
+
             # Get the correct ticket_id from the first section link on the page
             first_area = page.locator('area[href*="ticket_id="]').first
             href = await first_area.get_attribute('href') or ""
             match = re.search(r'ticket_id=(\d+)', href)
             ticket_id = match.group(1) if match else "1393"
-            
+
             # Scrape sections for this ticket type
             for section in tt_info["sections"]:
                 url = f"{BASE_URL}/w/events/Section.aspx?PackageID=0&event_id={event_id}&ticket_id={ticket_id}&cid=0&class_id=6&totalTix=1&vsection={section}"
                 await page.goto(url, timeout=60000)
                 await asyncio.sleep(1)
-                
+
                 available = await page.locator('.seat_available').count()
                 blocked = await page.locator('.seat_blocked').count()
                 other = await page.locator('.seat:not(.seat_available):not(.seat_blocked):not(.legend-seat)').count()
                 stats.sections[section] = SectionStats(available=available, blocked=blocked, other=other)
-            
+
             # Go back to event page for next ticket type
             await page.goto(f"{BASE_URL}/w/event.aspx?id={event_id}", timeout=60000)
             await asyncio.sleep(1)
-            
+
     finally:
         await context.close()
-    
+
     return stats
 
 
 def print_report(all_stats: dict[str, ShowStats], verbose: bool, timestamp: str | None = None):
     """Print the availability report."""
-    
+
     total_available = 0
     total_blocked = 0
-    
+
     print("\n" + "=" * 70)
     print("CINDERELLA TICKET AVAILABILITY REPORT")
     if timestamp:
         print(f"Scraped: {timestamp}")
     print("=" * 70)
-    
+
     for show_name, stats in all_stats.items():
         show_available = sum(s.available for s in stats.sections.values())
         show_blocked = sum(s.blocked for s in stats.sections.values())
         total_available += show_available
         total_blocked += show_blocked
-        
+
         print(f"\n{show_name}")
         print("-" * 40)
-        
+
         if verbose:
             # Section-level details
             for section in ["SEC-1", "SEC-2", "SEC-3", "SEC-4", "SEC-5", "SEC-6"]:
@@ -233,15 +233,15 @@ def print_report(all_stats: dict[str, ShowStats], verbose: bool, timestamp: str 
                 if s.total > 0:
                     print(f"  {section}: {s.available:3d} available / {s.blocked:3d} sold ({s.sold_pct:5.1f}% sold)")
             print()
-        
+
         # Ticket type summary
         for tt in ["P1", "P2", "P3"]:
             avail = stats.available_for_type(tt)
             secs = TICKET_TYPES[tt]["sections"]
             print(f"  {tt} ({secs[0][-1]}&{secs[1][-1]}): {avail:3d} available")
-        
+
         print(f"  Show total: {show_available} available, {show_blocked} sold")
-    
+
     # Overall summary
     print("\n" + "=" * 70)
     print("OVERALL SUMMARY")
@@ -257,7 +257,7 @@ async def run_scraper(verbose: bool):
     """Run the scraper and save results."""
     browser, playwright = await make_browser()
     all_stats: dict[str, ShowStats] = {}
-    
+
     try:
         for i, (show_name, event_id) in enumerate(SHOWS.items()):
             print(f"Scraping {show_name}... ({i+1}/{len(SHOWS)})", flush=True)
@@ -265,10 +265,10 @@ async def run_scraper(verbose: bool):
     finally:
         await browser.close()
         await playwright.stop()
-    
+
     filepath = save_to_json(all_stats)
     print(f"\nSaved to: {filepath}")
-    
+
     print_report(all_stats, verbose)
 
 
@@ -281,14 +281,14 @@ def show_from_file(filepath: Path, verbose: bool):
 
 def main():
     parser = argparse.ArgumentParser(description="Scrape Cinderella ticket availability")
-    parser.add_argument("-v", "--verbose", action="store_true", 
+    parser.add_argument("-v", "--verbose", action="store_true",
                         help="Show per-section details")
     parser.add_argument("--from-file", type=Path, metavar="FILE",
                         help="Show report from a specific JSON file")
     parser.add_argument("--from-latest", action="store_true",
                         help="Show report from the most recent JSON file")
     args = parser.parse_args()
-    
+
     if args.from_file:
         show_from_file(args.from_file, args.verbose)
     elif args.from_latest:
