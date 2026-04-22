@@ -28,6 +28,15 @@ SHOWS = {
     "Sun May 17 2PM": 2689,
 }
 
+TOTAL_SEATS = {
+    'SEC-1': 84,
+    'SEC-2': 81,
+    'SEC-3': 87,
+    'SEC-4': 87,
+    'SEC-5': 81,
+    'SEC-6': 84,
+}
+
 # Ticket types: which sections they allow, and which dropdown indices to use
 # Dropdown order: P1-Adult(0), P1-Youth(1), P2-Adult(2), P2-Youth(3), P3-Adult(4), P3-Youth(5)
 TICKET_TYPES = {
@@ -178,8 +187,17 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
             await asyncio.sleep(2)
             await page.wait_for_load_state('networkidle', timeout=30000)
 
-            # Get the correct ticket_id from the first section link on the page
-            first_area = page.locator('area[href*="ticket_id="]').first
+            area_with_href = page.locator('area[href*="ticket_id="]')
+            area_count = await area_with_href.count()
+
+            if area_count == 0:
+                for section in tt_info["sections"]:
+                    stats.sections[section] = SectionStats(available=0, blocked=TOTAL_SEATS[section], other=0)
+                await page.goto(f"{BASE_URL}/w/event.aspx?id={event_id}", timeout=60000)
+                await asyncio.sleep(1)
+                continue
+
+            first_area = area_with_href.first
             href = await first_area.get_attribute('href') or ""
             match = re.search(r'ticket_id=(\d+)', href)
             ticket_id = match.group(1) if match else "1393"
@@ -190,9 +208,10 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
                 await page.goto(url, timeout=60000)
                 await asyncio.sleep(1)
 
-                available = await page.locator('.seat_available').count()
+                available = await page.locator('.seat_available').count() + await page.locator('.seat_handicap').count()
                 blocked = await page.locator('.seat_blocked').count()
-                other = await page.locator('.seat:not(.seat_available):not(.seat_blocked):not(.legend-seat)').count()
+                # other = await page.locator('.seat:not(.seat_available):not(.seat_blocked):not(.legend-seat)').count()
+                other = 0
                 stats.sections[section] = SectionStats(available=available, blocked=blocked, other=other)
 
             # Go back to event page for next ticket type
