@@ -1212,50 +1212,6 @@
     }
   },
   {
-    "scraped_at": "2026-04-09_08-11-40",
-    "total_available": 285,
-    "total_blocked": 219,
-    "shows": {
-      "Fri May 8 7PM": {
-        "available": 285,
-        "blocked": 219,
-        "total": 504,
-        "sections": {
-          "SEC-1": {
-            "available": 51,
-            "blocked": 33,
-            "total": 84
-          },
-          "SEC-2": {
-            "available": 58,
-            "blocked": 23,
-            "total": 81
-          },
-          "SEC-3": {
-            "available": 12,
-            "blocked": 75,
-            "total": 87
-          },
-          "SEC-4": {
-            "available": 35,
-            "blocked": 52,
-            "total": 87
-          },
-          "SEC-5": {
-            "available": 54,
-            "blocked": 27,
-            "total": 81
-          },
-          "SEC-6": {
-            "available": 75,
-            "blocked": 9,
-            "total": 84
-          }
-        }
-      }
-    }
-  },
-  {
     "scraped_at": "2026-04-09_08-16-54",
     "total_available": 1902,
     "total_blocked": 2130,

@@ -100,7 +100,8 @@ footer{text-align:center;padding:24px 0;font-size:.75rem;color:var(--text-muted)
 
   <div class="timeline">
     <h2>Scrape History</h2>
-    <div class="loading" id="timeline"><div class="spinner"></div><br>Loading data...</div>
+    <div id="timelineLoading" class="loading"><div class="spinner"></div><br>Loading data...</div>
+    <div id="timeline"></div>
   </div>
 
   <footer>Last updated when <code>build_data.py</code> is run. Data is static.</footer>
@@ -128,11 +129,15 @@ const SHOW_COLORS = [
 const TOTAL_SEATS = 4032;
 const SEATS_PER_SHOW = 504;
 
-function formatDate(ts) {
+function parseTimestamp(ts) {
   const [date, time] = ts.split("_");
   const [y, m, d] = date.split("-").map(Number);
   const [h, min] = time.split("-").map(Number);
-  const dt = new Date(y, m - 1, d, h, min);
+  return new Date(y, m - 1, d, h, min);
+}
+
+function formatDate(ts) {
+  const dt = parseTimestamp(ts);
   return dt.toLocaleDateString("en-CA", {
     weekday:"short", month:"short", day:"numeric", year:"numeric"
   }) + " &mdash; " + dt.toLocaleTimeString("en-CA", {
@@ -140,10 +145,9 @@ function formatDate(ts) {
   });
 }
 
-function chartDate(ts) {
-  const [date, time] = ts.split("_");
-  const [y, m, d] = date.split("-");
-  return `${m}/${d}`;
+function shortDate(ts) {
+  const dt = parseTimestamp(ts);
+  return dt.toLocaleDateString("en-CA", { month:"short", day:"numeric" });
 }
 
 function pctColor(pct) {
@@ -179,34 +183,81 @@ function renderStats(data) {
 
 function renderChart(data) {
   const ctx = document.getElementById("trendChart").getContext("2d");
-  const labels = data.map(d => chartDate(d.scraped_at));
+
+  const timestamps = data.map(d => parseTimestamp(d.scraped_at));
+  const minTs = timestamps[0].getTime();
+  const maxTs = timestamps[timestamps.length - 1].getTime();
 
   const datasets = SHOW_ORDER.map((show, i) => ({
     label: show,
-    data: data.map(d => d.shows[show] ? d.shows[show].available : null),
+    data: data.reduce((pts, d) => {
+      const showData = d.shows[show];
+      if (showData) pts.push({ x: parseTimestamp(d.scraped_at).getTime(), y: showData.available });
+      return pts;
+    }, []),
     borderColor: SHOW_COLORS[i],
     backgroundColor: SHOW_COLORS[i] + "20",
     borderWidth: 2,
     pointRadius: 3,
     pointHoverRadius: 5,
     tension: 0.3,
+    spanGaps: true,
     fill: false
   }));
 
+  const totalIdx = datasets.length;
+  datasets.push({
+    label: "Total (all shows)",
+    data: data.map(d => ({
+      x: parseTimestamp(d.scraped_at).getTime(),
+      y: d.total_available
+    })),
+    borderColor: "#1a1a2e",
+    backgroundColor: "#1a1a2e20",
+    borderWidth: 3,
+    borderDash: [6, 3],
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    tension: 0.3,
+    spanGaps: true,
+    fill: false
+  });
+
+  const TOTAL_COLOR = "#1a1a2e";
+
+  function tickCallback(value) {
+    const dt = new Date(value);
+    return dt.toLocaleDateString("en-CA", { month:"short", day:"numeric" });
+  }
+
+  function autoSkip(tsMin, tsMax) {
+    const span = tsMax - tsMin;
+    const dayMs = 86400000;
+    if (span < 3 * dayMs) return "day";
+    if (span < 14 * dayMs) return "day";
+    if (span < 45 * dayMs) return "week";
+    return "month";
+  }
+
   window.trendChart = new Chart(ctx, {
     type: "line",
-    data: { labels, datasets },
+    data: { datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
+      interaction: { mode: "nearest", intersect: false, axis: "x" },
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
             title: (items) => {
-              const idx = items[0].dataIndex;
-              return formatDate(data[idx].scraped_at).replace(/&mdash;/, "—");
+              if (!items.length) return "";
+              const ts = new Date(items[0].parsed.x);
+              return ts.toLocaleDateString("en-CA", {
+                weekday:"short", month:"long", day:"numeric", year:"numeric"
+              }) + " — " + ts.toLocaleTimeString("en-CA", {
+                hour:"numeric", minute:"2-digit", hour12:true
+              });
             }
           }
         }
@@ -214,10 +265,17 @@ function renderChart(data) {
       scales: {
         y: {
           beginAtZero: true,
-          max: SEATS_PER_SHOW,
           title: { display: true, text: "Available Seats", font: { size: 11 } }
         },
         x: {
+          type: "linear",
+          min: minTs - 86400000,
+          max: maxTs + 86400000,
+          ticks: {
+            callback: tickCallback,
+            maxTicksLimit: 10,
+            font: { size: 11 }
+          },
           title: { display: true, text: "Date", font: { size: 11 } }
         }
       }
@@ -226,11 +284,19 @@ function renderChart(data) {
 
   const toggle = document.getElementById("chartToggle");
   toggle.innerHTML = "";
-  SHOW_ORDER.forEach((show, i) => {
+
+  const allLabels = [...SHOW_ORDER, "Total (all shows)"];
+  const allColors = [...SHOW_COLORS, TOTAL_COLOR];
+
+  allLabels.forEach((label, i) => {
     const btn = document.createElement("button");
-    btn.textContent = show;
-    btn.style.borderColor = SHOW_COLORS[i];
-    btn.style.color = SHOW_COLORS[i];
+    btn.textContent = label;
+    btn.style.borderColor = allColors[i];
+    btn.style.color = allColors[i];
+    if (i === totalIdx) {
+      btn.style.borderStyle = "dashed";
+      btn.style.fontWeight = "700";
+    }
     btn.addEventListener("click", () => {
       const meta = window.trendChart.getDatasetMeta(i);
       meta.hidden = !meta.hidden;
@@ -300,12 +366,15 @@ function toggleSnap(el) {
 fetch("all_data.json")
   .then(r => r.json())
   .then(data => {
-    document.querySelector(".loading")?.remove();
+    const loading = document.getElementById("timelineLoading");
+    if (loading) loading.remove();
     renderStats(data);
     renderChart(data);
     renderTimeline(data);
   })
   .catch(err => {
+    const loading = document.getElementById("timelineLoading");
+    if (loading) loading.remove();
     document.getElementById("timeline").innerHTML = `<p style="color:var(--red)">Failed to load data: ${err.message}</p>`;
   });
 </script>
