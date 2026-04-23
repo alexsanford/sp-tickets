@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Merge all scrape JSON files into public/all_data.json for the dashboard."""
 
+
 import json
 import glob
 import os
