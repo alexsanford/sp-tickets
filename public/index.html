@@ -96,6 +96,11 @@ footer{text-align:center;padding:24px 0;font-size:.75rem;color:var(--text-muted)
 .loading{text-align:center;padding:60px 0;color:var(--text-muted)}
 .spinner{display:inline-block;width:24px;height:24px;border:3px solid #e0e0e0;border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.view-latest-btn{display:flex;justify-content:center;margin:16px 0}
+.view-latest-btn a{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:var(--accent);color:#fff;border-radius:var(--radius);font-size:.9rem;font-weight:600;text-decoration:none;transition:background .15s,transform .15s;box-shadow:0 2px 8px rgba(67,97,238,.25)}
+.view-latest-btn a:hover{background:#3651d4;transform:translateY(-1px)}
+.view-latest-btn a:active{transform:translateY(0)}
+.view-latest-btn a svg{width:16px;height:16px;fill:currentColor}
 </style>
 </head>
 <body>
@@ -106,6 +111,8 @@ footer{text-align:center;padding:24px 0;font-size:.75rem;color:var(--text-muted)
   </header>
 
   <div class="stats-bar" id="statsBar"></div>
+
+  <div class="view-latest-btn"><a href="#" id="viewLatestBtn">View Latest Breakdown <svg viewBox="0 0 16 16"><path d="M1.5 5.5l6.5 6.5 6.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
 
   <div class="chart-section">
     <h2>Availability Over Time</h2>
@@ -389,7 +396,7 @@ function renderTimeline(data) {
       }).join("");
 
     return `
-      <div class="snapshot" id="snap-${data.length - 1 - idx}" onclick="toggleSnap(this)">
+      <div class="snapshot" id="${idx === 0 ? 'latest-snapshot' : 'snap-' + (data.length - 1 - idx)}" onclick="toggleSnap(this)">
         <div class="snapshot-header">
           <span class="chevron">&#9654;</span>
           <span class="date">${formatDate(snap.scraped_at)}</span>
@@ -409,6 +416,16 @@ function renderTimeline(data) {
 function toggleSnap(el) {
   el.classList.toggle("open");
 }
+
+document.getElementById("viewLatestBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  const el = document.getElementById("latest-snapshot");
+  if (!el) return;
+  el.classList.add("open");
+  setTimeout(() => {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
+});
 
 fetch("all_data.json")
   .then(r => r.json())
