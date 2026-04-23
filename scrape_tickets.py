@@ -168,6 +168,11 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
         await page.goto(f"{BASE_URL}/w/event.aspx?id={event_id}", timeout=60000)
         await wait_for_cloudflare(page)
 
+        if await page.locator('text=All tickets are sold out.').count() > 0:
+            for section in TOTAL_SEATS:
+                stats.sections[section] = SectionStats(available=0, blocked=TOTAL_SEATS[section], other=0)
+            return stats
+
         # Get all dropdowns
         dropdowns = await page.locator('[id*="dropLimit"]').all()
 
