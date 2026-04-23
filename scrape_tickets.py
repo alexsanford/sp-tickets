@@ -162,6 +162,7 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
     stats = ShowStats()
     context = await new_context(browser)
     page = await context.new_page()
+    print(f'Event ID: {event_id}')
 
     try:
         # Load event page to establish session
@@ -178,6 +179,8 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
 
         # Process each ticket type separately (P1, P2, P3)
         for tt_name, tt_info in TICKET_TYPES.items():
+            print(f'TT Name: {tt_name}')
+            print(f'TT Info: {tt_info}')
             # Reset all dropdowns to 0
             for dd in dropdowns:
                 await dd.select_option('0')
