@@ -28,6 +28,10 @@ header p{color:var(--text-muted);font-size:.9rem;margin-top:4px}
 
 .chart-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin:20px 0;box-shadow:var(--shadow)}
 .chart-section h2{font-size:1rem;font-weight:600;margin-bottom:12px}
+.chart-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.chart-controls .range-btns{display:flex;gap:4px}
+.chart-controls .range-btns button{padding:4px 12px;font-size:.72rem;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer;font-family:inherit;transition:all .15s}
+.chart-controls .range-btns button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .chart-wrapper{position:relative;width:100%;height:320px}
 .chart-toggle{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .chart-toggle button{padding:4px 10px;font-size:.7rem;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer;font-family:inherit;transition:all .15s}
@@ -59,7 +63,7 @@ header p{color:var(--text-muted);font-size:.9rem;margin-top:4px}
 .badge-available{display:inline-block;background:var(--green);color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px}
 
 .sections-grid{display:flex;flex-wrap:wrap;gap:4px 12px}
-.section-chip{font-size:.72rem;white-space:nowrap}
+.section-chip{font-size:.72rem;white-space:nowrap;display:inline-flex;align-items:center;gap:2px}
 .section-chip .sec-name{color:var(--text-muted)}
 .section-chip .sec-count{font-weight:600}
 
@@ -73,9 +77,20 @@ footer{text-align:center;padding:24px 0;font-size:.75rem;color:var(--text-muted)
   header h1{font-size:1.2rem}
   .snapshot-header{flex-wrap:wrap;gap:6px}
   .progress-bar-wrap{order:10;width:100%;flex:unset}
-  .shows-table{font-size:.75rem}
-  .shows-table th,.shows-table td{padding:6px 8px}
   .chart-wrapper{height:240px}
+  .chart-controls{flex-direction:column;align-items:flex-start}
+  .snapshot-body{padding:0 4px}
+  .shows-table,.shows-table thead,.shows-table tbody,.shows-table th,.shows-table td,.shows-table tr{display:block}
+  .shows-table thead{display:none}
+  .shows-table tr{padding:10px 8px;border-bottom:1px solid var(--border)}
+  .shows-table tr:last-child{border-bottom:none}
+  .shows-table td{padding:4px 8px;border-bottom:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .shows-table td::before{content:attr(data-label);font-size:.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
+  .shows-table td:last-child{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;padding:4px 8px}
+  .shows-table td:last-child::before{display:none}
+  .sections-grid{flex-direction:column;gap:4px}
+  .section-chip{flex-wrap:wrap;width:100%}
+  .mini-bar{width:60px}
 }
 
 .loading{text-align:center;padding:60px 0;color:var(--text-muted)}
@@ -94,6 +109,12 @@ footer{text-align:center;padding:24px 0;font-size:.75rem;color:var(--text-muted)
 
   <div class="chart-section">
     <h2>Availability Over Time</h2>
+    <div class="chart-controls">
+      <div class="range-btns" id="rangeToggle">
+        <button class="active" data-range="month">Last Month</button>
+        <button data-range="all">Full History</button>
+      </div>
+    </div>
     <div class="chart-wrapper"><canvas id="trendChart"></canvas></div>
     <div class="chart-toggle" id="chartToggle"></div>
   </div>
@@ -184,67 +205,71 @@ function renderStats(data) {
 function renderChart(data) {
   const ctx = document.getElementById("trendChart").getContext("2d");
 
-  const timestamps = data.map(d => parseTimestamp(d.scraped_at));
-  const minTs = timestamps[0].getTime();
-  const maxTs = timestamps[timestamps.length - 1].getTime();
+  const allTimestamps = data.map(d => parseTimestamp(d.scraped_at));
+  const minTsAll = allTimestamps[0].getTime();
+  const maxTsAll = allTimestamps[allTimestamps.length - 1].getTime();
 
-  const datasets = SHOW_ORDER.map((show, i) => ({
-    label: show,
-    data: data.reduce((pts, d) => {
-      const showData = d.shows[show];
-      if (showData) pts.push({ x: parseTimestamp(d.scraped_at).getTime(), y: showData.available });
-      return pts;
-    }, []),
-    borderColor: SHOW_COLORS[i],
-    backgroundColor: SHOW_COLORS[i] + "20",
-    borderWidth: 2,
-    pointRadius: 3,
-    pointHoverRadius: 5,
-    tension: 0.3,
-    spanGaps: true,
-    fill: false
-  }));
+  window.chartData = data;
+  window.allMinTs = minTsAll;
+  window.allMaxTs = maxTsAll;
 
-  const totalIdx = datasets.length;
-  datasets.push({
-    label: "Total (all shows)",
-    data: data.map(d => ({
-      x: parseTimestamp(d.scraped_at).getTime(),
-      y: d.total_available
-    })),
-    borderColor: "#1a1a2e",
-    backgroundColor: "#1a1a2e20",
-    borderWidth: 3,
-    borderDash: [6, 3],
-    pointRadius: 4,
-    pointHoverRadius: 6,
-    tension: 0.3,
-    spanGaps: true,
-    fill: false
-  });
+  const oneMonthMs = 30 * 86400000;
+  const lastMonthTs = maxTsAll - oneMonthMs;
 
-  const TOTAL_COLOR = "#1a1a2e";
+  window.lastMonthMin = Math.max(minTsAll, lastMonthTs);
+
+  function buildFilteredData(rangeMin) {
+    const filtered = data.filter(d => parseTimestamp(d.scraped_at).getTime() >= rangeMin);
+
+    const datasets = SHOW_ORDER.map((show, i) => ({
+      label: show,
+      data: filtered.reduce((pts, d) => {
+        const showData = d.shows[show];
+        if (showData) pts.push({ x: parseTimestamp(d.scraped_at).getTime(), y: showData.available });
+        return pts;
+      }, []),
+      borderColor: SHOW_COLORS[i],
+      backgroundColor: SHOW_COLORS[i] + "20",
+      borderWidth: 2,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      spanGaps: true,
+      fill: false
+    }));
+
+    datasets.push({
+      label: "Total (all shows)",
+      data: filtered.map(d => ({
+        x: parseTimestamp(d.scraped_at).getTime(),
+        y: d.total_available
+      })),
+      borderColor: "#1a1a2e",
+      backgroundColor: "#1a1a2e20",
+      borderWidth: 3,
+      borderDash: [6, 3],
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.3,
+      spanGaps: true,
+      fill: false
+    });
+
+    return datasets;
+  }
 
   function tickCallback(value) {
     const dt = new Date(value);
     return dt.toLocaleDateString("en-CA", { month:"short", day:"numeric" });
   }
 
-  function autoSkip(tsMin, tsMax) {
-    const span = tsMax - tsMin;
-    const dayMs = 86400000;
-    if (span < 3 * dayMs) return "day";
-    if (span < 14 * dayMs) return "day";
-    if (span < 45 * dayMs) return "week";
-    return "month";
-  }
-
   window.trendChart = new Chart(ctx, {
     type: "line",
-    data: { datasets },
+    data: { datasets: buildFilteredData(window.lastMonthMin) },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: { duration: 400 },
       interaction: { mode: "nearest", intersect: false, axis: "x" },
       plugins: {
         legend: { display: false },
@@ -269,8 +294,8 @@ function renderChart(data) {
         },
         x: {
           type: "linear",
-          min: minTs - 86400000,
-          max: maxTs + 86400000,
+          min: window.lastMonthMin - 86400000,
+          max: maxTsAll + 86400000,
           ticks: {
             callback: tickCallback,
             maxTicksLimit: 10,
@@ -282,11 +307,15 @@ function renderChart(data) {
     }
   });
 
+  const totalIdx = SHOW_ORDER.length;
+  window.trendChart.getDatasetMeta(totalIdx).hidden = true;
+  window.trendChart.update();
+
   const toggle = document.getElementById("chartToggle");
   toggle.innerHTML = "";
 
   const allLabels = [...SHOW_ORDER, "Total (all shows)"];
-  const allColors = [...SHOW_COLORS, TOTAL_COLOR];
+  const allColors = [...SHOW_COLORS, "#1a1a2e"];
 
   allLabels.forEach((label, i) => {
     const btn = document.createElement("button");
@@ -296,6 +325,7 @@ function renderChart(data) {
     if (i === totalIdx) {
       btn.style.borderStyle = "dashed";
       btn.style.fontWeight = "700";
+      btn.classList.add("hidden-line");
     }
     btn.addEventListener("click", () => {
       const meta = window.trendChart.getDatasetMeta(i);
@@ -304,6 +334,23 @@ function renderChart(data) {
       window.trendChart.update();
     });
     toggle.appendChild(btn);
+  });
+
+  const rangeButtons = document.querySelectorAll("#rangeToggle button");
+  rangeButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      rangeButtons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const range = btn.dataset.range;
+      const rangeMin = range === "all" ? minTsAll - 86400000 : window.lastMonthMin - 86400000;
+      const newDatasets = buildFilteredData(range === "all" ? 0 : window.lastMonthMin);
+      window.trendChart.data.datasets = newDatasets;
+      window.trendChart.getDatasetMeta(totalIdx).hidden = true;
+      const toggleBtns = document.querySelectorAll("#chartToggle button");
+      toggleBtns[totalIdx].classList.add("hidden-line");
+      window.trendChart.options.scales.x.min = rangeMin;
+      window.trendChart.update();
+    });
   });
 }
 
@@ -334,10 +381,10 @@ function renderTimeline(data) {
           }).join(" ");
 
         return `<tr class="${rowClass}">
-          <td class="show-name">${name}</td>
-          <td>${show.available} / ${show.total}</td>
-          <td>${statusBadge}</td>
-          <td><div class="sections-grid">${sectionsHtml}</div></td>
+          <td data-label="Show" class="show-name">${name}</td>
+          <td data-label="Available">${show.available} / ${show.total}</td>
+          <td data-label="Status">${statusBadge}</td>
+          <td data-label="Sections"><div class="sections-grid">${sectionsHtml}</div></td>
         </tr>`;
       }).join("");
 
