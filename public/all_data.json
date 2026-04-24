@@ -6361,5 +6361,308 @@
         }
       }
     }
+  },
+  {
+    "scraped_at": "2026-04-24_16-35-09",
+    "total_available": 472,
+    "total_blocked": 3560,
+    "shows": {
+      "Fri May 8 7PM": {
+        "available": 37,
+        "blocked": 467,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 6,
+            "blocked": 78,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 4,
+            "blocked": 77,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 2,
+            "blocked": 79,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 25,
+            "blocked": 59,
+            "total": 84
+          }
+        }
+      },
+      "Sat May 9 2PM": {
+        "available": 0,
+        "blocked": 504,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 0,
+            "blocked": 84,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 0,
+            "blocked": 81,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 0,
+            "blocked": 81,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 0,
+            "blocked": 84,
+            "total": 84
+          }
+        }
+      },
+      "Sat May 9 7PM": {
+        "available": 66,
+        "blocked": 438,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 19,
+            "blocked": 65,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 4,
+            "blocked": 77,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 1,
+            "blocked": 80,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 42,
+            "blocked": 42,
+            "total": 84
+          }
+        }
+      },
+      "Sun May 10 2PM": {
+        "available": 9,
+        "blocked": 495,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 3,
+            "blocked": 81,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 2,
+            "blocked": 79,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 1,
+            "blocked": 80,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 3,
+            "blocked": 81,
+            "total": 84
+          }
+        }
+      },
+      "Fri May 15 7PM": {
+        "available": 145,
+        "blocked": 359,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 47,
+            "blocked": 37,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 5,
+            "blocked": 76,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 2,
+            "blocked": 85,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 14,
+            "blocked": 67,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 77,
+            "blocked": 7,
+            "total": 84
+          }
+        }
+      },
+      "Sat May 16 2PM": {
+        "available": 8,
+        "blocked": 496,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 1,
+            "blocked": 83,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 2,
+            "blocked": 79,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 0,
+            "blocked": 81,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 5,
+            "blocked": 79,
+            "total": 84
+          }
+        }
+      },
+      "Sat May 16 7PM": {
+        "available": 166,
+        "blocked": 338,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 52,
+            "blocked": 32,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 9,
+            "blocked": 72,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 5,
+            "blocked": 82,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 12,
+            "blocked": 75,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 22,
+            "blocked": 59,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 66,
+            "blocked": 18,
+            "total": 84
+          }
+        }
+      },
+      "Sun May 17 2PM": {
+        "available": 41,
+        "blocked": 463,
+        "total": 504,
+        "sections": {
+          "SEC-1": {
+            "available": 14,
+            "blocked": 70,
+            "total": 84
+          },
+          "SEC-2": {
+            "available": 3,
+            "blocked": 78,
+            "total": 81
+          },
+          "SEC-3": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-4": {
+            "available": 0,
+            "blocked": 87,
+            "total": 87
+          },
+          "SEC-5": {
+            "available": 7,
+            "blocked": 74,
+            "total": 81
+          },
+          "SEC-6": {
+            "available": 17,
+            "blocked": 67,
+            "total": 84
+          }
+        }
+      }
+    }
   }
 ]
