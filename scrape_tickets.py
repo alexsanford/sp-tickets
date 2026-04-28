@@ -195,19 +195,27 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
             await asyncio.sleep(2)
             await page.wait_for_load_state('networkidle', timeout=30000)
 
-            area_with_href = page.locator('area[href*="ticket_id="]')
+            area_with_href = page.locator('area')
+            # area_with_href = page.locator('area[href*="ticket_id"]')
+            # if tt_name == 'P3':
+            #     print(await page.content())
+            #     print(area_with_href)
+            #     print(await area_with_href.count())
             area_count = await area_with_href.count()
 
+            # print('Check...')
             if area_count == 0:
+                # print('area_count == 0')
                 for section in tt_info["sections"]:
                     stats.sections[section] = SectionStats(available=0, blocked=TOTAL_SEATS[section], other=0)
                 await page.goto(f"{BASE_URL}/w/event.aspx?id={event_id}", timeout=60000)
                 await asyncio.sleep(1)
                 continue
 
-            first_area = area_with_href.first
-            href = await first_area.get_attribute('href') or ""
-            match = re.search(r'ticket_id=(\d+)', href)
+            # first_area = area_with_href.first
+            # href = await first_area.get_attribute('href') or ""
+            # match = re.search(r'ticket_id=(\d+)', href)
+            match = re.search(r'ticket_id=(\d+)', await page.content())
             ticket_id = match.group(1) if match else "1393"
 
             # Scrape sections for this ticket type
@@ -217,6 +225,9 @@ async def scrape_show(browser: Browser, event_id: int) -> ShowStats:
                 await asyncio.sleep(1)
 
                 available = await page.locator('.seat_available').count() + await page.locator('.seat_handicap').count()
+                # print(ticket_id)
+                # print(section)
+                # print(available)
                 blocked = await page.locator('.seat_blocked').count()
                 # other = await page.locator('.seat:not(.seat_available):not(.seat_blocked):not(.legend-seat)').count()
                 other = 0
